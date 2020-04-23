@@ -15,8 +15,8 @@ public class WeatherApi {
     public interface WeatherInterface {
         @GET("weather?")
         Call<WeatherResponse> getToday(
-                @Query("lon") int lon,
-                @Query("lat") int lat,
+                @Query("lon") double lon,
+                @Query("lat") double lat,
                 @Query("appid") String appId
         );
     }
