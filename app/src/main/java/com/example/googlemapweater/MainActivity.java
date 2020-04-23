@@ -7,14 +7,10 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.inputmethod.EditorInfo;
-import android.widget.EditText;
 import android.widget.SearchView;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -60,7 +56,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,9 +63,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(isServicesOK()){
             getLocationPermission();
         }
-
     }
-
 
     private void geoLocate(String searchString) {
         Log.d(TAG, "geoLocate: geolocating");
@@ -154,7 +147,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void moveCamera(LatLng latLng, float zoom){
         Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude );
-        MarkerOptions options = new MarkerOptions().position(latLng).title(getWeather(latLng.longitude, latLng.latitude));
+        getWeather(latLng.longitude, latLng.latitude);
+        MarkerOptions options = new MarkerOptions().position(latLng).title(weatherInfo);
         mMap.addMarker(options);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
     }
@@ -212,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private String getWeather(double lon, double lat) {
+    private void getWeather(double lon, double lat) {
         Call<WeatherResponse> callToday = WeatherApi.getClient().create(WeatherApi.WeatherInterface.class).getToday(lon, lat, WeatherApi.APP_ID);
         callToday.enqueue(new Callback<WeatherResponse>() {
             @Override
@@ -232,7 +226,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Log.e(TAG, t.toString());
             }
         });
-        return weatherInfo;
     }
 
     @Override
