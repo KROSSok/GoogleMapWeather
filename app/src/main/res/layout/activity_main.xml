@@ -13,5 +13,11 @@
 
     </TextView>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Map"
+        android:id="@+id/btnMap"
+        android:layout_below="@id/weatherInfo"/>
 
 </RelativeLayout>
