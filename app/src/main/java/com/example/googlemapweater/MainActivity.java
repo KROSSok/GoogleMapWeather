@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final float DEFAULT_ZOOM = 15f;
     private static final int ERROR_DIALOG_REQUEST = 9001;
 
-    private String weatherInfo;
     private Boolean mLocationPermissionsGranted = false;
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
@@ -79,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(list.size() > 0){
             Address address = list.get(0);
             Log.d(TAG, "geoLocate: found a location: " + address.toString());
-            moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM);
+            getWeather(address.getLongitude(), address.getLatitude());
         }
     }
 
@@ -131,8 +130,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if(task.isSuccessful()){
                             Log.d(TAG, "onComplete: found location!");
                             Location currentLocation = (Location) task.getResult();
-                            moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()),
-                                    DEFAULT_ZOOM);
+                            getWeather(currentLocation.getLongitude(), currentLocation.getLatitude());
                         }else{
                             Log.d(TAG, "onComplete: current location is null");
                             Toast.makeText(MainActivity.this, "unable to get current location", Toast.LENGTH_SHORT).show();
@@ -145,10 +143,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void moveCamera(LatLng latLng, float zoom){
+    private void moveCamera(LatLng latLng, float zoom, String weatherInfo){
         Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude );
-        getWeather(latLng.longitude, latLng.latitude);
-        MarkerOptions options = new MarkerOptions().position(latLng).title(weatherInfo);
+        MarkerOptions options = new MarkerOptions().position(latLng).title("WEATHER INFO " + weatherInfo);
         mMap.addMarker(options);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
     }
@@ -157,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Log.d(TAG, "initMap: initializing map");
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(MainActivity.this);
+
     }
 
     private void getLocationPermission(){
@@ -206,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void getWeather(double lon, double lat) {
+    private void getWeather(final double lon, final double lat) {
         Call<WeatherResponse> callToday = WeatherApi.getClient().create(WeatherApi.WeatherInterface.class).getToday(lon, lat, WeatherApi.APP_ID);
         callToday.enqueue(new Callback<WeatherResponse>() {
             @Override
@@ -216,7 +214,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Log.d(TAG,response.toString());
                 if (response.isSuccessful()) {
                     Log.e(TAG, "weather info " + data.getCity() + " +" + data.getTemp() + " C " + data.getWeather());
-                    weatherInfo = data.getCity() + " +" + data.getTemp() + " C " + data.getWeather();
+                    moveCamera(new LatLng(lat, lon), DEFAULT_ZOOM, data.getCity() + " +" + data.getTemp() + " C " + data.getWeather());
                 }
             }
 

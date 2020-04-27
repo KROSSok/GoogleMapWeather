@@ -8,14 +8,6 @@ import java.util.List;
 
 public class WeatherResponse {
 
-    class Weather {
-        private String main;
-    }
-
-    class Main {
-        private double temp;
-    }
-
     @SerializedName("weather")
     private List<Weather> main;
 
@@ -39,6 +31,13 @@ public class WeatherResponse {
 
     public String getCity() { return city; }
 
+}
+class Weather {
+    public String main;
+}
+
+class Main {
+    public double temp;
 }
 
 
