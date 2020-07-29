@@ -1,33 +1,27 @@
 package com.example.googlemapweater;
 
 import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.Dialog;
+import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.Log;
-
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-
 import android.widget.ImageView;
-import android.widget.SearchView;
-
 import android.widget.Toast;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
-
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -35,26 +29,27 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
-import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final String TAG = "MainActivity";
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
@@ -62,36 +57,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
     private static final float DEFAULT_ZOOM = 15f;
     private static final int ERROR_DIALOG_REQUEST = 9001;
+    private int AUTOCOMPLETE_REQUEST_CODE = 1;
 
     private Boolean mLocationPermissionsGranted = false;
     private GoogleMap mMap;
     private FusedLocationProviderClient mFusedLocationProviderClient;
 
-    private PlacesAutoCompleteAdapter mPlacesAutoCompleteAdapter;
-
     private ImageView mGps;
-    private Marker mMarker;
-
-
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Places.initialize(getApplicationContext(), getString(R.string.google_maps_API_key));
+
         mGps = findViewById(R.id.ic_gps);
+        mGps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onClick: clicked gps icon");
+                getDeviceLocation();
+            }
+        });
 
         if(isServicesOK()){
             getLocationPermission();
         }
-
     }
-
 
     private void geoLocate(String searchString) {
         Log.d(TAG, "geoLocate: geolocating");
@@ -262,80 +255,53 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
         MenuItem searchViewItem = menu.findItem(R.id.action_search);
-        final SearchView searchView = (SearchView) searchViewItem.getActionView();
-        searchView.setMaxWidth(Integer.MAX_VALUE);
-        searchView.setQueryHint("search for city");
-
-        AutocompleteSessionToken autocompleteSessionToken;
-        autocompleteSessionToken = AutocompleteSessionToken.newInstance();
-        Places.initialize(getApplicationContext(), "AIzaSyBR0nYtZuIijQwbl2ZA5mVTrx1BPqvjaGg");
-
-        // Create a new Places client instance.
-        PlacesClient placesClient = Places.createClient(this);
-        mPlacesAutoCompleteAdapter = new PlacesAutoCompleteAdapter(this, placesClient,autocompleteSessionToken);
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                geoLocate(query);
-                hideSoftKeyboard();
-                return true;
-            }
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                mPlacesAutoCompleteAdapter.getFilter().filter(newText);
-                return false;
-            }
-        });
-
-        mGps.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.d(TAG, "onClick: clicked gps icon");
-                getDeviceLocation();
-            }
-        });
-
         return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_search:
+                onSearchCalled();
+                return true;
+            case android.R.id.home:
+                finish();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    public void onSearchCalled() {
+        // Set the fields to specify which types of place data to
+        // return after the user has made a selection.
+        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME);
+        // Start the autocomplete intent.
+        Intent intent = new Autocomplete.IntentBuilder(
+                AutocompleteActivityMode.OVERLAY, fields)
+                .build(this);
+        startActivityForResult(intent, AUTOCOMPLETE_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == AUTOCOMPLETE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                Place place = Autocomplete.getPlaceFromIntent(data);
+                Log.i(TAG, "Place: " + place.getName() + ", " + place.getId());
+                geoLocate(place.getName());
+            } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
+                // TODO: Handle the error.
+                Status status = Autocomplete.getStatusFromIntent(data);
+                Log.i(TAG, status.getStatusMessage());
+            } else if (resultCode == RESULT_CANCELED) {
+                // The user canceled the operation.
+            }
+        }
     }
 
     private void hideSoftKeyboard(){
         this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
-
 }
-
-
-//Завдання.
-//        1) Почитати, що таке REST API
-//        2) Підключити, прочитати доку про retrofit https://square.github.io/retrofit/
-//        3) https://openweathermap.org/api ознайомитись з документацією (заюзати їх API в майбутньому)
-//        4) https://developers.google.com/maps/documentation/android-sdk/intro ознайомитись (заюзати)
-//
-//        При старті аплікації, має грузитись гугл карта, з маркером поточної локації користувача.
-//        При кліку на маркер карти має показувати поточну погоду. (Lviv, +16 C , sunny)
-//        в Аплікації має бути тулбар з можливість шукати (searchview), поки без функціоналу.
-//        Також має бути можливість поставити маркер наприклад на київ і взнати погоду там.
-//        Поки все.
-
-//        Тарас Пащенко, [12.03.20 15:18]
-//        хз, чи вийде це Вові зробити
-//        гугл вроді зара поміняв все
-//        і щоб дістати api-key для карт тре вказати billing account
-//
-//        Сєрий, [12.03.20 15:19]
-//        навіть якщо так, йому всерівно debug треба, я думаю це реалізується
-//
-//        Сєрий, [12.03.20 15:21]
-//        та введе свою карту і норм буде
-//
-//        Сєрий, [12.03.20 15:26]
-//        If you want to change the quota to more than 1 load per day, you need a billing account (link a credit card to your Google account).
-//
-//        Сєрий, [12.03.20 15:26]
-//        підари
-//
-//        Сєрий, [12.03.20 15:27]
-//        почитаєш вова скільки там халявно квота з введеною карточкою, якщо ні  то заюзаємо openstreetmap
-
-//        url = "http://api.openweathermap.org/data/2.5/weather?lat=49&lon=23&appid=aa9129410495346cb551bf6e9e3aa5fe";

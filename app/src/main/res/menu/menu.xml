@@ -7,6 +7,10 @@
         android:icon="@drawable/ic_search"
         android:title="Search"
         android:queryHint="Search"
-        app:showAsAction="ifRoom|withText"
-        app:actionViewClass="android.widget.SearchView"/>
+        app:showAsAction="always|collapseActionView"/>
+<!--        app:showAsAction="ifRoom|withText"-->
+<!--        app:actionViewClass="android.widget.SearchView"/>-->
+
+
+
 </menu>
